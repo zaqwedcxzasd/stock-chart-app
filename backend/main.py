@@ -11,9 +11,15 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
 app = FastAPI(title="Stock Chart API")
 
+_allowed_origins = [
+    o.strip()
+    for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=_allowed_origins,
     allow_methods=["GET"],
     allow_headers=["*"],
 )
@@ -31,6 +37,12 @@ def _api_key() -> str:
 def _raise_for_jquants_error(resp: httpx.Response) -> None:
     if resp.status_code == 200:
         return
+    if resp.status_code == 400:
+        try:
+            msg = resp.json().get("message", resp.text)
+        except Exception:
+            msg = resp.text
+        raise HTTPException(status_code=400, detail=msg)
     messages = {
         401: "J-Quants API authentication failed (invalid API key)",
         403: "J-Quants API access denied (check your plan)",
