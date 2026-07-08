@@ -2,7 +2,7 @@
 
 ## 概要
 
-日本株の銘柄コードを入力すると、J-Quants API から日足株価データを取得してチャート表示する Web アプリ。
+日本株の銘柄コードを入力すると、Yahoo Finance から日足株価データを取得してチャート表示する Web アプリ。
 
 ## 技術スタック
 
@@ -15,7 +15,7 @@
 | バックエンド | FastAPI | 0.138.x |
 | バックエンド | Python | 3.12 |
 | バックエンド | uv（パッケージ管理） | 最新 |
-| データソース | J-Quants API | v2 |
+| データソース | Yahoo Finance (yfinance) | 1.x |
 
 ## システム構成
 
@@ -40,12 +40,10 @@
 │   - 銘柄情報エンドポイント│
 └───────────┬─────────────┘
             │ HTTPS
-            │ x-api-key ヘッダー認証
             ▼
 ┌─────────────────────────┐
-│   J-Quants API v2        │
-│   - /equities/bars/daily │  ← 日足 OHLCV
-│   - /equities/master     │  ← 銘柄マスタ
+│   Yahoo Finance          │
+│   - yfinance ライブラリ  │  ← 日足 OHLCV・銘柄情報
 └─────────────────────────┘
 ```
 
@@ -53,9 +51,9 @@
 
 1. ユーザーが銘柄コード（例: `7203`）と期間（1M / 3M / 1Y）を入力して検索
 2. フロントエンドがバックエンドの `/api/stock/{code}?from=...&to=...` を呼び出す
-3. バックエンドが `x-api-key` ヘッダー付きで J-Quants API を呼び出す
-4. J-Quants API がページネーション付きで日足データを返す
-5. バックエンドが全ページを収集し、日付昇順に並べてフロントエンドへ返す
+3. バックエンドが yfinance 経由で Yahoo Finance からデータを取得する
+4. yfinance が日足データを pandas DataFrame で返す
+5. バックエンドが日付昇順に並べてフロントエンドへ返す
 6. フロントエンドが終値ラインチャート＋出来高バーチャートを描画する
 
 銘柄情報（社名・業種・市場）は `/api/stock/{code}/info` から並行して取得し、チャートのヘッダーに表示する。
@@ -67,7 +65,7 @@ stock-app/
 ├── backend/
 │   ├── main.py              # FastAPI アプリ本体
 │   ├── tests/
-│   │   └── test_main.py     # pytest テスト（13件）
+│   │   └── test_main.py     # pytest テスト（11件）
 │   ├── pyproject.toml       # 依存パッケージ定義
 │   ├── .env                 # 環境変数（gitignore済み）
 │   └── .env.example         # 環境変数テンプレート
